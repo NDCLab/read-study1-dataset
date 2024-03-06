@@ -1,7 +1,7 @@
-# Task1 Stimuli
+# Reading Ranger Stimuli (texts): READ study 1
 
 ### Instructions
-This folder contains the stimuli used to create the task. Replace "Task1" in the header above with a descriptive name for the task; provide project-specific notes below.
+This folder contains the stimuli used to create the task. Provide project-specific notes below.
 
 
 ### Project Notes

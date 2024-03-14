@@ -171,6 +171,9 @@ annotations_base <- paste(base, "..", "error-coding", "my-initial-annotations-fo
 #            'pencils', 'pens', 'pine', 'raspberries', 'roses',
 #            'sandals', 'sparrows', 'tables', 'trucks', 'tulips')
 
+
+
+
 into_dict <- function(sequence, f, env = new.env()) {
   map(sequence, \(x) env[[x]] = f(x)) # fill a dictionary that maps x -> f(x)
   return(env)
@@ -247,25 +250,12 @@ read_error_data_from_path <- function(passage_path) {
 }
 
 
-build_scaffold_from_rownames <- function(raw_error_data) # from the output of `read_error_data_from_path`
-{
-  word_labels <- rownames(raw_error_data)
-  is_word_onset <- map(word_labels, \(item) !startsWith(item, "..."))
-  print(is_word_onset)
-  return(cbind(word      = word_labels,
-               wordOnset = is_word_onset))
-}
-
 passage_name_to_df <- function(passage_nickname, participant_id, dir_root)
   cbind(scaffolds[[passage_nickname]], # include our scaffolds
         passage_nickname %>%
           build_full_passage_path(dir_root, participant_id) %>% # path
           read_error_data_from_path
   )
-
-## Counting up totals for a given passage
-# count_rows_with_a_one <- function(df)
-#   filter(df, if_any(everything(), ~ . == 1)) %>% nrow
 
 complain_when_invalid <- function(passage_df, participant_id, passage_nickname) {
   report = paste("\n\t\t<< ERROR REPORT", participant_id, "-", passage_nickname, ">>")
@@ -320,28 +310,6 @@ append_words_and_frequencies <- function(collapsed_df, nickname)
   cbind(word           = word_lists[[nickname]],
         log10frequency = passage_frequencies[[nickname]],
         collapsed_df)
-
-
-
-# errcols <- function(passage_df) select(passage_df, misprod:elongation)
-#
-# count_errors_by_type <- function(passage_df)
-#   errcols(passage_df) %>% map_df(as.numeric) %>% colSums %>% t %>% as.data.frame
-#
-# count_error_syllables_any_type <- function(passage_df) # grand total, across types
-#   errcols(passage_df) %>% count_rows_with_a_one # only count the rows that have an(y) error marked
-#
-# count_corrected_error_syllables <- function(passage_df)
-#   # get only corrected rows; how many have errors?
-#   filter(passage_df, corrected == 1) %>% count_error_syllables_any_type
-#
-# count_uncorrected_error_syllables <- function(passage_df)
-#   # as above, but only the uncorrected rows
-#   filter(passage_df, corrected == 0) %>% count_error_syllables_any_type
-#
-# count_errors_by_word <- function(passage_x_scaffold, error_type)
-#   filter(passage_x_scaffold, {{error_type}} == 1) %>% # syllables with this error
-#   tally_up(word_id)
 
 colnames_from_range <- function(df, colrange)
   colnames(select(df, {{colrange}}))

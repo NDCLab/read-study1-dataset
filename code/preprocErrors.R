@@ -223,13 +223,16 @@ filler = data.frame(
 
 
 ## Calculations about the passages themselves, for things like word ratios
+titles <- excel_sheets(scaffolds_path)
 timestamp = now("America/New_York") %>% format("%Y%m%d_%I%M%P")
 # stim_char <- paste(base, 'materials/readAloud-ldt/stimuli/readAloud/readAloud-stimuli_characteristics.xlsx', sep="/", collapse=NULL)
 # SUBList <- paste(base, 'materials/readAloud-ldt/stimuli/resources/SUBTLEXus74286wordstextversion.txt', sep="/") #downloaded from https://www.ugent.be/pp/experimentele-psychologie/en/research/documents/subtlexus on 06/13/2022
 # subtlexus <- read.table(SUBList, header=TRUE)
 # subtlexus$Word <- tolower(subtlexus$Word) #make all entries in SUBTLEXUS lower-case
-# fixme:
-annotations_base <- paste(base, "..", "error-coding", "my-initial-annotations-for-preliminary-preproc-testing", sep = '/')
+annotations_base <- paste(path_to_read_dataset,
+                          "..",
+                          "FOR-TESTING_reconciled-error-coding", #fixme
+                          sep = '/')
 
 # programmatcially determine passage names
 # fs::dir_ls(annotations_base, recurse = TRUE, type = "file") %>%
@@ -249,6 +252,19 @@ into_dict <- function(sequence, f, env = new.env()) {
   return(env)
 }
 
+# from genScaffolds; this is for testing purposes and circumvents hardcoding
+filename_to_namespaced_label <- function(path) {# '|' as Excel disallows '/'
+  ns <- path %>% dirname %>% basename # not the path itself but its parent
+  qualify <- function(base) paste(ns, base, sep = '|') # prepend our ns
+
+  path %>%
+    basename %>%
+    fs::path_ext_remove() %>%
+    qualify
+
+}
+# filename_to_namespaced_label(exemplar_excel_path)
+
 # First, we want to be able to quickly, easily, and expressively check, for any
 # given passage, which group (a or b) that passage belongs to
 # yield <- function(result) {
@@ -263,14 +279,12 @@ into_dict <- function(sequence, f, env = new.env()) {
 tally_up <- function(df, col) # how many unique values in col?
   df %>% select({{col}}) %>% unique %>% nrow
 
-# id_to_int <- function(scaffolds_df)
-#   # Instead of using labels like "skunkowlsyllable1" etc, just take the int part
-#   mutate(scaffolds_df,
-#          across(syllable_id:word_id, ~ as.numeric(str_extract(., "\\d+"))))
-
-# get all scaffolds as a dict, converting syllable_ and word_id into ints
-# scaffolds       = into_dict(titles, \(x)
-#                             read_xlsx(scaffolds_path, sheet = x) %>% id_to_int) # syntax: scaffolds[[passage_name]]   -> scaffold df for that passage
+# syntax: scaffolds[[passage_name]] -> scaffold df for that passage
+scaffolds       = into_dict(titles, \(x)
+                                    read_xlsx(scaffolds_path, sheet = x))
+# test case:
+sample_label <- filename_to_namespaced_label(exemplar_excel_path)
+scaffolds[[sample_label]]
 # word_counts     = into_dict(titles, \(x) tally_up(scaffolds[[x]], word_id))     # syntax: word_counts[[passage_name]] -> number of words in that passage
 # syllable_counts = into_dict(titles, \(x) tally_up(scaffolds[[x]], syllable_id))
 # word_lists      = into_dict(titles, \(x)

@@ -104,20 +104,21 @@ library(lubridate) # now
 library(readr) # write_csv
 library(glue) # glue
 
+# setwd("your/path/to/this/repo/../read-study1-analysis")
+# We need a directory with the gold standard for each of these passages:
+path_to_read_dataset <- "." # "../read-study1-dataset"
+# path_to_error_coding_excels <-
+#   paste(path_to_read_dataset,
+#         "materials/reading-ranger/stimuli/passage-error-excels",
+#         sep = '/')
+# this makes one assumption, namely that the `read-study1-dataset` and
+# `read-study1-analysis` repos are located in the same parent folder
 
-# error_types_idiomatic = c(
-#   "misprod", "ins_dup", "omit", "word_stress",
-#   "filled_pause", "hesitation", "elongation", "missing_prosodic_break",
-#   "word_substitution", "inaudible_or_interference",
-#   "correction", "last_precorrection_syllable"
-# )
+# fs::dir_exists(path_to_error_coding_excels)
 
-base = "~/Documents/ndclab/proj-READ/read-analysis-sandbox"
-base = "/home/data/NDClab/datasets/readAloud-valence-dataset"
 # passage_dir = "~/Documents/ndclab/rwe-analysis-sandbox/github-structure-mirror/readAloud-valence-dataset/derivatives/preprocessed/error-coding/test"
 
 default_suffix <- "_reconciled" # for participant folder names
-# default_suffix <- "_ls" # for participant folder names
 
 # if we're in debug mode, write output dataframes to disk as they are made
 incremental_writeout <- if(DEBUG_MODE)
@@ -131,8 +132,14 @@ if(DEBUG_MODE && !fs::is_dir(incremental_writeout))
 
 filler = data.frame( # what we'll use when data is empty or invalid, until the files are manually fixed
   logical(12), # FALSE 12 times
-  row.names = error_types_idiomatic
+  row.names = error_types_idiomatic # fixme
 ) %>% t %>% as.data.frame
+
+
+
+
+
+
 
 ## Calculations about the passages themselves, for things like word ratios
 timestamp = now("America/New_York") %>% format("%Y%m%d_%I%M%P")

@@ -105,19 +105,19 @@ library(readr) # write_csv
 library(glue) # glue
 library(janitor) # make_clean_names
 
-# setwd("your/path/to/this/repo/../read-study1-analysis")
+# setwd("your/path/to/this/repo")
 # We need a directory with the gold standard for each of these passages:
-path_to_read_dataset <- "." # "../read-study1-dataset"
+path_to_read_dataset <- "." # usually equivalent to "../read-study1-dataset"
+
+path_to_stimuli <-
+  paste(path_to_read_dataset, "materials/reading-ranger/stimuli", sep = '/')
+
 path_to_error_coding_excels <-
-  paste(path_to_read_dataset,
-        "materials/reading-ranger/stimuli/passage-error-excels",
-        sep = '/')
-# this makes one assumption, namely that the `read-study1-dataset` and
-# `read-study1-analysis` repos are located in the same parent folder
+  paste(path_to_stimuli, "passage-error-excels", sep = '/')
 
-# fs::dir_exists(path_to_error_coding_excels)
-
-# passage_dir = "~/Documents/ndclab/rwe-analysis-sandbox/github-structure-mirror/readAloud-valence-dataset/derivatives/preprocessed/error-coding/test"
+path_to_resources <- paste(path_to_stimuli, 'resources', sep = '/')
+# fs::dir_exists(path_to_error_coding_excels);
+# fs::dir_exists(path_to_resources)
 
 default_suffix <- "_reconciled" # for participant folder names
 
@@ -226,9 +226,19 @@ filler = data.frame(
 titles <- excel_sheets(scaffolds_path)
 timestamp = now("America/New_York") %>% format("%Y%m%d_%I%M%P")
 # stim_char <- paste(base, 'materials/readAloud-ldt/stimuli/readAloud/readAloud-stimuli_characteristics.xlsx', sep="/", collapse=NULL)
-# SUBList <- paste(base, 'materials/readAloud-ldt/stimuli/resources/SUBTLEXus74286wordstextversion.txt', sep="/") #downloaded from https://www.ugent.be/pp/experimentele-psychologie/en/research/documents/subtlexus on 06/13/2022
-# subtlexus <- read.table(SUBList, header=TRUE)
-# subtlexus$Word <- tolower(subtlexus$Word) #make all entries in SUBTLEXUS lower-case
+
+
+
+## Set up frequency data
+# downloaded on 06/13/2022 from
+# https://www.ugent.be/pp/experimentele-psychologie/en/research/documents/subtlexus
+path_to_subtlexus <-
+  paste(path_to_resources, "SUBTLEXus74286wordstextversion.txt", sep="/")
+# fs::is_file(path_to_subtlexus)
+
+subtlexus <- read.table(path_to_subtlexus, header=TRUE)
+subtlexus$Word <- tolower(subtlexus$Word) #make all entries in SUBTLEXUS lower-case
+
 annotations_base <- paste(path_to_read_dataset,
                           "..",
                           "FOR-TESTING_reconciled-error-coding", #fixme

@@ -239,10 +239,25 @@ path_to_subtlexus <-
 subtlexus <- read.table(path_to_subtlexus, header=TRUE)
 subtlexus$Word <- tolower(subtlexus$Word) #make all entries in SUBTLEXUS lower-case
 
+default_frequency <- # change from RWE! In prep, we set it to the corpus median;
+                     # for simplicity, since we already use wordfreq data here,
+                     # for READ instead we do it in preproc (here) rather than
+                     # waiting til prep
+  median(subtlexus$Lg10WF) #RWE preproc has it as 0 and corrects to this in prep
+
 annotations_base <- paste(path_to_read_dataset,
                           "..",
                           "FOR-TESTING_reconciled-error-coding", #fixme
                           sep = '/')
+
+
+get_frequency_for_word <- function(word) {
+  # caution: if a lemma is desired, it must be derived elsewhere (this function
+  # does not contain that logic)
+  return(subtlexus$Lg10WF[match(word, subtlexus$Word)] %>%
+           replace(is.na(.), default_frequency))
+}
+
 
 # programmatcially determine passage names
 # fs::dir_ls(annotations_base, recurse = TRUE, type = "file") %>%
@@ -257,6 +272,7 @@ annotations_base <- paste(path_to_read_dataset,
 #   discard(is.na) %>%
 #   sort %>% paste(collapse = "', '")
 
+# Set up scaffolds and other passage-constant metadata
 into_dict <- function(sequence, f, env = new.env()) {
   map(sequence, \(x) env[[x]] = f(x)) # fill a dictionary that maps x -> f(x)
   return(env)
@@ -289,6 +305,7 @@ filename_to_namespaced_label <- function(path) {# '|' as Excel disallows '/'
 tally_up <- function(df, col) # how many unique values in col?
   df %>% select({{col}}) %>% unique %>% nrow
 
+
 # syntax: scaffolds[[passage_name]] -> scaffold df for that passage
 scaffolds       = into_dict(titles, \(x)
                                     read_xlsx(scaffolds_path, sheet = x))
@@ -298,10 +315,19 @@ word_lists      = into_dict(titles, \(x)
                                       distinct(word_id, .keep_all = TRUE) %>%
                                       pull(word_clean))
 
+get_frequencies_for_passage <- function(nickname) # but must be namespaced!
+  word_lists[[nickname]] %>% map_vec(get_frequency_for_word)
+
+passage_frequencies = into_dict(titles, get_frequencies_for_passage)
+
+# todo: scaffolds erroneously consider hyphenated words (ex. "long-haul") to be
+# one word, for raw_word, word, *and* word_clean; figure out why and fix this
+
 # test case:
 sample_label <- filename_to_namespaced_label(exemplar_excel_path)
 scaffolds[[sample_label]]
 word_lists[[sample_label]]
+passage_frequencies[[sample_label]]
 
 ## Now: logic to read in the error passage XLSXes
 build_participant_dirname <- function(dir_root, participant_id, suffix = default_suffix) # github_root, 150077 -> "/home/[...]/sub-150077/sub-150077_reconciled"
@@ -388,20 +414,6 @@ collapse_by_word <- function(passage_df) {
     group_by(word_id) %>%                           # collapse as words
     summarize(across(misprod:corrected, ~ any(.)))  # error on this word or not?
 }
-
-
-get_frequency_for_word <- function(word) {
-  # caution: if a lemma is desired, it must be derived elsewhere (this function
-  # does not contain that logic)
-  return(subtlexus$Lg10WF[match(word, subtlexus$Word)] %>%
-           replace(is.na(.), 0))
-}
-
-
-get_frequencies_for_passage <- function(nickname)
-  word_lists[[nickname]] %>% map_vec(get_frequency_for_word)
-
-passage_frequencies = into_dict(titles, get_frequencies_for_passage)
 
 append_words_and_frequencies <- function(collapsed_df, nickname)
   cbind(word           = word_lists[[nickname]],

@@ -282,13 +282,16 @@ tally_up <- function(df, col) # how many unique values in col?
 # syntax: scaffolds[[passage_name]] -> scaffold df for that passage
 scaffolds       = into_dict(titles, \(x)
                                     read_xlsx(scaffolds_path, sheet = x))
+
+word_lists      = into_dict(titles, \(x)
+                                    scaffolds[[x]] %>%
+                                      distinct(word_id, .keep_all = TRUE) %>%
+                                      pull(word_clean))
+
 # test case:
 sample_label <- filename_to_namespaced_label(exemplar_excel_path)
 scaffolds[[sample_label]]
-# word_counts     = into_dict(titles, \(x) tally_up(scaffolds[[x]], word_id))     # syntax: word_counts[[passage_name]] -> number of words in that passage
-# syllable_counts = into_dict(titles, \(x) tally_up(scaffolds[[x]], syllable_id))
-# word_lists      = into_dict(titles, \(x)
-#                             read_xlsx(stim_char, sheet = x, skip = 1)[,1:2]$stimWord)
+word_lists[[sample_label]]
 
 ## Now: logic to read in the error passage XLSXes
 build_participant_dirname <- function(dir_root, participant_id, suffix = default_suffix) # github_root, 150077 -> "/home/[...]/sub-150077/sub-150077_reconciled"
@@ -325,8 +328,8 @@ build_full_passage_path <- function(participant_dir_root, passage_nickname, grad
 
 read_error_data_from_path <- function(passage_path) {
   df = data.frame(
-    read_xlsx(passage_path)[2:13,], # get only the rows misprod ... corrected
-    row.names = error_types_idiomatic
+    read_xlsx(passage_path)[2:13,], # get only the rows misprod ... corrected #fixme
+    row.names = error_types_idiomatic # also isn't there already a whole thing for this?
   ) %>% t
 
   return(df[-1,] %>% # ignore the original titles
@@ -347,13 +350,13 @@ complain_when_invalid <- function(passage_df, participant_id, passage_nickname) 
   any_empty = sum(is.na(passage_df)) != 0
   if (any_empty) {
     message(report); message("Empty value (NA) in the dataframe!\n")
-    return(filler) # 7 values of FALSE
+    return(filler) # all values of FALSE
   }
 
   any_invalid = any(passage_df !=0 & passage_df != 1)
   if(any_invalid) {
     message(report); message("Invalid value (neither 1 nor 0) in the dataframe!\n")
-    return(filler) # 7 values of FALSE
+    return(filler) # all values of FALSE
   }
 
   return(passage_df)
@@ -370,7 +373,7 @@ collapse_by_word <- function(passage_df) {
   # else FALSE
 
   passage_df %>%
-    mutate(across(misprod:corrected,
+    mutate(across(misprod:corrected, # fixme
                   ~ as.logical(as.integer(.)))) %>% # make booleans
     group_by(word_id) %>%                           # collapse as words
     summarize(across(misprod:corrected, ~ any(.)))  # error on this word or not?

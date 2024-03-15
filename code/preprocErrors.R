@@ -247,7 +247,7 @@ default_frequency <- # change from RWE! In prep, we set it to the corpus median;
 
 annotations_base <- paste(path_to_read_dataset,
                           "..",
-                          "FOR-TESTING_reconciled-error-coding", #fixme
+                          "FOR-TESTING_reconciled-error-coding-corrected-structure", #fixme
                           sep = '/')
 
 exemplar_coded_excel_path <- annotations_base %>% # proof of concept: we CAN get it w/o hard coding
@@ -587,12 +587,12 @@ exemplar_error_summary <- error_summary_with_metadata(exemplar_coded_excel_path)
 
 
 # All passages for a participant
-generate_summary_for_each_passage_with_metadata <- function(dir_root, participant_id, write_to = incremental_writeout) {
+generate_summary_for_each_passage_with_metadata <- function(participant_dir, write_to = incremental_writeout) {
+  participant_id <- dirname_to_participant_id(participant_dir)
   df =
-    build_participant_dirname(dir_root, participant_id) %>% # identify their folder
-    dir %>% # pick out: which passages did they actually read?
-    fs::path_ext_remove() %>% # take them _without_ the extension
-    map_df(error_summary_with_metadata, participant_id, dir_root) # glue that together into a df
+    participant_dir %>% # identify their folder
+    fs::dir_ls(recurse = TRUE, type = "file") %>% # pick out: which passages did they actually read?
+    map_df(error_summary_with_metadata) # glue that together into a df
 
   if (!is.null(write_to) && fs::is_dir(write_to)) { # incremental CSV: just this participant, with all their passages
     outfile_debug = paste(write_to, "/", participant_id, "_", timestamp, '.csv', sep = "")
@@ -601,6 +601,17 @@ generate_summary_for_each_passage_with_metadata <- function(dir_root, participan
 
   return(df)
 }
+
+exemplar_participant_dir <-
+  annotations_base %>% # proof of concept: we CAN get it w/o hard coding
+  fs::dir_ls(type = "dir") %>% # all participants
+  first
+
+exemplar_participant_dir %>% fs::dir_ls(recurse = TRUE, type = "file")
+
+exemplar_summary_whole_participant <-
+  exemplar_participant_dir %>%
+  generate_summary_for_each_passage_with_metadata
 
 # Now, for each participant under a directory, each identified by the form sub_XXXXXX_reconciled,
 # call generate_summary_for_each_passage_with_metadata(the_parentdir_of_all_those, that_id)

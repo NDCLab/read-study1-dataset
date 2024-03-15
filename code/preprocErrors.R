@@ -224,7 +224,7 @@ filler = data.frame(
 
 ## Calculations about the passages themselves, for things like word ratios
 titles <- excel_sheets(scaffolds_path)
-timestamp = now("America/New_York") %>% format("%Y%m%d_%I%M%P")
+timestamp <- now("America/New_York") %>% format("%Y%m%d_%I%M%P")
 # stim_char <- paste(base, 'materials/readAloud-ldt/stimuli/readAloud/readAloud-stimuli_characteristics.xlsx', sep="/", collapse=NULL)
 
 
@@ -613,28 +613,30 @@ exemplar_summary_whole_participant <-
   exemplar_participant_dir %>%
   generate_summary_for_each_passage_with_metadata
 
-# Now, for each participant under a directory, each identified by the form sub_XXXXXX_reconciled,
+# Now, for each participant under a directory, each identified by the form
+# sub_XXXXXX_reconciled:
 # call generate_summary_for_each_passage_with_metadata(the_parentdir_of_all_those, that_id)
-summarize_errors_in_subdirectories <- function(dir_root, subfolder_match)
-  dir_root %>%
-  dir(include.dirs = TRUE, recursive = TRUE, pattern = subfolder_match) %>% # walk the directory
-  map(dirname_to_participant_id) %>% # split them up: sub-150079_reconciled -> 150079
-  map_df(generate_summary_for_each_passage_with_metadata, dir_root = dir_root) # summarize all spreadsheets for that participant, for each participant
 
-# we've matched subfolders by explicitly returning directories (include.dirs =
-# TRUE) and recursing (recursive = TRUE), thus catching -"_reconciled" subfolders
+summarize_errors_in_subdirectories <- function(dir_root, subfolder_match) {
+  dir_root %>%
+    fs::dir_ls(type = "dir", regexp = "sub-\\d+_reconciled$") %>%
+    map_df(generate_summary_for_each_passage_with_metadata) # summarize all spreadsheets for that participant, for each participant
+}
 
 ## Now finally: write all our results to a file (a CSV)
-annotations_base = paste(base, "derivatives/preprocessed", sep = '/')
-github_root = paste(annotations_base, "error-coding", sep = '/')
+# annotations_base = paste(base, "derivatives/preprocessed", sep = '/')
+# github_root = paste(annotations_base, "error-coding", sep = '/')
 
 label = "disfluencies_subject-x-passage-x-word_"
 
 outpath <- paste(sep = "", annotations_base, '/', label, timestamp, ".csv")
 # e.g. "./some/path/disfluencies_20230520_1240pm.csv"
 
-github_root %>% # passage_dir %>%
-  summarize_errors_in_subdirectories("^sub-\\d{6}_reconciled$") %>%
-  write_csv(outpath)
+result_megadf <-
+  annotations_base %>%
+  summarize_errors_in_subdirectories("^sub-\\d+_reconciled$")
+
+
+write_csv(result_megadf, outpath)
 
 print(outpath)

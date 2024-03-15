@@ -389,11 +389,11 @@ collapse_by_word <- function(passage_df) {
   passage_df %>%
     mutate(across(annotation_type_names, # replace 1s and 0s with TRUE and FALSE
                   ~ as.logical(as.integer(.)))) %>%
-    group_by(word_id) %>%
+    group_by(passage, category, word_id) %>%
     reframe(across(-annotation_type_names, identity), # leave non errors as is
             across(annotation_type_names, ~ any(.))) %>% # flatten errors to word level
-    distinct(word_id, .keep_all = TRUE)
-
+    distinct(word_id, .keep_all = TRUE) %>% # dedup
+    arrange(ordered_word_id = extract_end_of_word_id(word_id)) # original order
 
 }
 
@@ -403,6 +403,10 @@ collapse_by_word <- function(passage_df) {
 # replace 1s and 0s with TRUE and FALSE
 conjoin_test <- conjoin_b %>% mutate(across(annotation_type_names,
                                             ~ as.logical(as.integer(.))))
+
+extract_end_of_word_id <- function(full_id) {
+  str_extract(full_id, "\\d+$") %>% as.integer()
+}
 
 conjoin_test %>%
   group_by(word_id) %>%
@@ -420,6 +424,19 @@ conjoin_test %>%
 
 # Now: run once just like summary fn would below, with corrected version of
 # collapse_by_word that we now have!
+
+# passage_nickname <- filename_to_namespaced_label(passage_path)
+exemplar_participant_id <-
+  exemplar_coded_excel_path %>% dirname %>% dirname_to_participant_id
+
+
+summary =
+  exemplar_coded_excel_path %>% # this whole fn should just take a file name instead!
+  # complain_when_invalid(participant_id, passage_nickname) %>%
+  read_error_data_from_path %>%
+  conjoin_passage_metadata_with_coded_data(sample_label) %>%
+  collapse_by_word %>%
+  mutate(participant_id = exemplar_participant_id, .before = 1)
 
 colnames_from_range <- function(df, colrange)
   colnames(select(df, {{colrange}}))
@@ -559,16 +576,19 @@ error_summary_with_metadata <- function(passage_path) {
     passage_path %>%
     read_error_data_from_path %>%
     conjoin_passage_metadata_with_coded_data(passage_nickname) %>%
-    collapse_by_word %>%
-    append_pes_annotation_cols(misprod, hesitation, forward_context = 5, prior_context =  5) %>%
-    append_pes_annotation_cols(hesitation, misprod, forward_context = 5, prior_context =  5) %>%
-    select(word:corrected, matches("(^|.*_)any.*[_$]")) # any_prior_misprod, any_following_hesitation, any_prior_hesitation, any_following_misprod)
+    collapse_by_word # %>%
+    # append_pes_annotation_cols(misprod, hesitation, forward_context = 5, prior_context =  5) %>%
+    # append_pes_annotation_cols(hesitation, misprod, forward_context = 5, prior_context =  5) %>%
+    # select(word:corrected, matches("(^|.*_)any.*[_$]")) # any_prior_misprod, any_following_hesitation, any_prior_hesitation, any_following_misprod)
 
-  return(cbind(
-    id = participant_id, # pre-pose an id column
-    passage = passage_nickname, # then a passage column
-    summary
-  ))
+
+  return(mutate(summary, participant_id = participant_id, .before = 1))
+
+#   return(cbind(
+#     id = participant_id, # pre-pose an id column
+#     passage = passage_nickname, # then a passage column
+#     summary
+#   ))
 }
 
 # All passages for a participant

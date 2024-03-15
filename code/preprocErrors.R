@@ -308,7 +308,8 @@ tally_up <- function(df, col) # how many unique values in col?
 
 # syntax: scaffolds[[passage_name]] -> scaffold df for that passage
 scaffolds       = into_dict(titles, \(x)
-                                    read_xlsx(scaffolds_path, sheet = x))
+                                    read_xlsx(scaffolds_path, sheet = x) %>%
+                                      filter(!is.na(syllable)))
 
 word_lists      = into_dict(titles, \(x)
                                     scaffolds[[x]] %>%
@@ -348,6 +349,7 @@ conjoin_passage_metadata_with_coded_data <- function(error_data_df,
   # would be meaningless
   bind_cols(scaffolds[[passage_label]],
             error_data_df %>%
+              filter(!is.na(syllable)) %>% # best shot at making them same len
               select(-syllable)) %>% # it already exists in scaffolds
     mutate(wordFreq = passage_frequencies[[passage_label]])
 }
@@ -592,6 +594,7 @@ generate_summary_for_each_passage_with_metadata <- function(participant_dir, wri
   df =
     participant_dir %>% # identify their folder
     fs::dir_ls(recurse = TRUE, type = "file") %>% # pick out: which passages did they actually read?
+    str_subset(glue("sub-{participant_id}[^/]*.xlsx"), negate = TRUE) %>%
     map_df(error_summary_with_metadata) # glue that together into a df
 
   if (!is.null(write_to) && fs::is_dir(write_to)) { # incremental CSV: just this participant, with all their passages
@@ -639,4 +642,4 @@ result_megadf <-
 
 write_csv(result_megadf, outpath)
 
-print(outpath)
+print(fs::path_abs(outpath))

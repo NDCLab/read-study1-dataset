@@ -333,7 +333,14 @@ scaffolds[[sample_label]]
 word_lists[[sample_label]]
 passage_frequencies[[sample_label]]
 
-## Now: logic to process the error passage XLSXes
+## Now: logic to process the error passage XLSXes into end result
+
+a_b_column_sets_to_bidirectionally_check_for <- # warning: not general!
+  data.frame(
+    lhs = c("hesitation", "misproduced_syllable"), # check this
+    rhs = c("misproduced_syllable", "hesitation")  # against this
+  )
+
 conjoin_passage_metadata_with_coded_data <- function(error_data_df,
                                                      passage_label) {
   # a join would be better but we aren't tracking syllable identity when reading
@@ -377,8 +384,8 @@ complain_when_invalid <- function(passage_df, participant_id, passage_nickname) 
 
 
 collapse_by_word <- function(passage_df) {
-  # for each word in the passage, consider it an error when any of its syllables
-  # is marked as such
+  # for each word in the passage, consider it an error when **any** of its
+  # syllables is marked as such
 
   # map over words
   # is any syllable corresponding to this word marked?
@@ -397,10 +404,7 @@ collapse_by_word <- function(passage_df) {
 
 }
 
-
-# not working how I'd think it would
 # let's test on this
-# replace 1s and 0s with TRUE and FALSE
 conjoin_test <- conjoin_b %>% mutate(across(annotation_type_names,
                                             ~ as.logical(as.integer(.))))
 
@@ -408,11 +412,7 @@ extract_end_of_word_id <- function(full_id) {
   str_extract(full_id, "\\d+$") %>% as.integer()
 }
 
-conjoin_test %>%
-  group_by(word_id) %>%
-  reframe(across(-annotation_type_names, identity), # leave non errors as is
-          across(annotation_type_names, ~ any(.)))# %>% # flatten errors to word level
-
+# those which are not meaningful at the final word level
 syllable_dependent_cols <- c("syllable", "wordOnset", "syllable_id", "raw_word")
 
 conjoin_test %>%
@@ -422,21 +422,10 @@ conjoin_test %>%
   # select(!any_of(syllable_dependent_cols)) %>%
   distinct(word_id, .keep_all = TRUE)
 
-# Now: run once just like summary fn would below, with corrected version of
-# collapse_by_word that we now have!
 
-# passage_nickname <- filename_to_namespaced_label(passage_path)
 exemplar_participant_id <-
   exemplar_coded_excel_path %>% dirname %>% dirname_to_participant_id
 
-
-summary =
-  exemplar_coded_excel_path %>% # this whole fn should just take a file name instead!
-  # complain_when_invalid(participant_id, passage_nickname) %>%
-  read_error_data_from_path %>%
-  conjoin_passage_metadata_with_coded_data(sample_label) %>%
-  collapse_by_word %>%
-  mutate(participant_id = exemplar_participant_id, .before = 1)
 
 colnames_from_range <- function(df, colrange)
   colnames(select(df, {{colrange}}))
@@ -475,10 +464,12 @@ a_b_sequence_lookback <- function(df, errtypes_a, errtypes_b, prior_context = 1)
 
   df_with_lhs_lookbacks = append_lookbacks_multicol(df, {{errtypes_a}}, prior_context)
 
+  col1 = paste("any_prior", lhs_cols, collapse = "_", sep = '_') # for labeling columns
+  col2 = paste(rhs_cols, "with", col1, collapse = "_", sep = '_') # for labeling columns
 
   mutate(df_with_lhs_lookbacks,
-         "any_prior_{{errtypes_a}}" := if_any(matches(lookbacks_regex), ~ . == 1),
-         "{{errtypes_b}}_with_any_prior_{{errtypes_a}}" := if_any(rhs_cols, ~ . == 1) & if_any(matches(lookbacks_regex), ~ . == 1))
+         {{col1}} := if_any(matches(lookbacks_regex), ~ . == 1),
+         {{col2}} := if_any(rhs_cols, ~ . == 1) & if_any(matches(lookbacks_regex), ~ . == 1))
 }
 
 # All the above, with lookaheads
@@ -516,9 +507,12 @@ a_b_sequence_lookahead <- function(df, errtypes_a, errtypes_b, forward_context =
 
   df_with_rhs_lookaheads = append_lookaheads_multicol(df, {{errtypes_b}}, forward_context)
 
+  col1 = paste("any_upcoming", rhs_cols, collapse = "_", sep = '_') # for labeling columns
+  col2 = paste(lhs_cols, "with", col1, collapse = "_", sep = '_') # for labeling columns
+
   mutate(df_with_rhs_lookaheads,
-         "any_upcoming_{{errtypes_b}}" := if_any(matches(lookaheads_regex), ~ . == 1),
-         "{{errtypes_a}}_with_any_upcoming_{{errtypes_b}}" := if_any(lhs_cols, ~ . == 1) & if_any(matches(lookaheads_regex), ~ . == 1)
+         {{col1}} := if_any(matches(lookaheads_regex), ~ . == 1),
+         {{col2}} := if_any(lhs_cols, ~ . == 1) & if_any(matches(lookaheads_regex), ~ . == 1)
   )
 }
 
@@ -571,25 +565,26 @@ error_summary_with_metadata <- function(passage_path) {
   if(DEBUG_MODE) status_message(passage_nickname, participant_id)
 
   summary = # this whole fn should just take a file name instead!
-    # passage_name_to_df(passage_nickname, participant_id, dir_root) %>%
-    # complain_when_invalid(participant_id, passage_nickname) %>%
     passage_path %>%
     read_error_data_from_path %>%
+  # complain_when_invalid(participant_id, passage_nickname) %>%
     conjoin_passage_metadata_with_coded_data(passage_nickname) %>%
-    collapse_by_word # %>%
-    # append_pes_annotation_cols(misprod, hesitation, forward_context = 5, prior_context =  5) %>%
-    # append_pes_annotation_cols(hesitation, misprod, forward_context = 5, prior_context =  5) %>%
-    # select(word:corrected, matches("(^|.*_)any.*[_$]")) # any_prior_misprod, any_following_hesitation, any_prior_hesitation, any_following_misprod)
-
+    collapse_by_word %>%
+    append_pes_annotation_cols(forward_context = 5, prior_context = 5,
+      a_b_column_sets_to_bidirectionally_check_for$lhs[1],
+      a_b_column_sets_to_bidirectionally_check_for$rhs[1]) %>%
+    append_pes_annotation_cols(forward_context = 5, prior_context = 5,
+      a_b_column_sets_to_bidirectionally_check_for$lhs[2],
+      a_b_column_sets_to_bidirectionally_check_for$rhs[2]) %>%
+    select(-matches("(prev|next)_*")) %>% # drop incremental a_b cols
+    select(-syllable_dependent_cols)      # and those unmeaningful at word level
 
   return(mutate(summary, participant_id = participant_id, .before = 1))
 
-#   return(cbind(
-#     id = participant_id, # pre-pose an id column
-#     passage = passage_nickname, # then a passage column
-#     summary
-#   ))
 }
+
+exemplar_error_summary <- error_summary_with_metadata(exemplar_coded_excel_path)
+
 
 # All passages for a participant
 generate_summary_for_each_passage_with_metadata <- function(dir_root, participant_id, write_to = incremental_writeout) {

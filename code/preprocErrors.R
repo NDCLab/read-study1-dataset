@@ -1,7 +1,7 @@
 # Reading in reconciled Excels, summarizing the errors of each, and writing that
 # to a new CSV
 # Luc Sahar and Jessica M. Alexander -- NDCLab, Florida International University
-# last updated 2024-03-13
+# last updated 2024-03-15
 # This version is intended for word-level operations
 
 ### --- IO information --- ###
@@ -632,7 +632,7 @@ summarize_errors_in_subdirectories <- function(dir_root, subfolder_match) {
 
 label = "disfluencies_subject-x-passage-x-word_"
 
-outpath <- paste(sep = "", annotations_base, '/', label, timestamp, ".csv")
+outpath <- paste(sep = "", path_to_read_dataset, "/derivatives/", label, timestamp, ".csv")
 # e.g. "./some/path/disfluencies_20230520_1240pm.csv"
 
 result_megadf <-

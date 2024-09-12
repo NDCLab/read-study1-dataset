@@ -4,3 +4,19 @@
 # data specific files
 derivatives/*
 sourcedata/
+
+# monitoring scripts and files
+data-monitoring/central-tracker_*.csv
+data-monitoring/data-monitoring-log.md
+data-monitoring/hallMonitor.sh
+data-monitoring/hallMonitor.sub
+data-monitoring/update-tracker.py
+data-monitoring/verify-copy.py
+data-monitoring/check-datadict.py
+data-monitoring/check-id.py
+data-monitoring/slurm*.out
+data-monitoring/preprocess*.out
+data-monitoring/data-dictionary/central-tracker_datadict_latest.csv
+data-monitoring/preprocess.sub
+data-monitoring/rename-cols.py
+data-monitoring/ndar/

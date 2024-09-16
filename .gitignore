@@ -4,6 +4,7 @@
 # data specific files
 derivatives/*
 sourcedata/
+analysis/
 
 # monitoring scripts and files
 data-monitoring/central-tracker_*.csv
